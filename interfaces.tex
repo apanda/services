@@ -1,0 +1,177 @@
+\section{Entities and Interfaces}
+\label{sec:interfaces}
+
+We now provide more details on the entities involved and the basic tenant and client interfaces. We hope it is self-evident that these interfaces are simple, safe, self-service, flexible, and narrow, and could easily support usage-based charging (which are the properties we cited in the introduction as having been crucial for EC2).
+
+\subsection{Entities}
+
+In addition to allowing applications to invoke an extensible set of edge services (\ie VMs running tenant-supplied or operator-supplied code), \name provides each application with two simple entities: a Coordinator and a Discovery service. 
+\begin{itemize}
+\item {\bf Coordinator:} The Coordinator is responsible for bootstrapping applications. The Coordinator is provided by the carrier and is shared across applications.\footnote{While the Coordinator is shared across applications, its state is partitioned by application and hence applications are isolated from each other.} The coordinator also provides the tenant interface; tenants first invoke \name by contacting the Coordinator and handing it an instantiation consisting of a template and metadata. 
+\item {\bf Discovery service:} The Discovery service is responsible for binding application-specific names to addresses, and can require authentication before using. The Discovery services uses tenant-specified metadata for these resolutions.
+
+\end{itemize}
+
+These two entities are responsible for supporting the tenant and client interfaces.
+
+\subsection{Tenant Interface}
+Tenants interact with the carrier through the carrier's Coordinator. The Coordinator provides an interface for instantiating applications, and the input to this interface is comprised of two parts:
+\begin{itemize}
+\item {\bf Template:} The template describes the basic structure of the application, by naming the components involved and specifying the dataflow between them. The application components include tenant-managed servers and carrier-managed edge services. Tenants can in turn delegate the management of their servers to others: the term tenant-managed only implies that the tenant is responsible for providing them, as opposed to the carrier-managed edge services which are operated by the carrier.  
+
+As an example, for the CDN service (Section~\ref{sec:scenario}) the invoking template would be:
+
+\vspace{-1.2em}
+\begin{align*}
+\text{Client} \rightarrow \text{Cache Service} \rightarrow \text{Origin Server}
+\end{align*}
+
+Upon receiving such a template, the Coordinator returns (to the tenant) a handle for each of the application components, so the tenant can change the metadata associated with each of these components.
+
+\item {\bf Metadata:} The tenant supplies the Coordinator with metadata for each application component. This metadata includes:
+\begin{itemize}
+\item Names for all application components, and whether they are carrier-managed or tenant-managed
+\item For tenant-managed servers, the metadata includes IP addresses for tenant-managed servers and other relevant information (\eg certificates to ensure the validity of the server).\eat{\noteteemu{how does the tenant obtain the IP addresses in first place; isn't this something operator could provide -- given that it is responsible for deploying them, potentially dynamically based on usage loads?}\notepanda{Tenant managed servers are in the tenant premise or in a datacenter, these are the things the carrier is not automatically scaling.}}
+\item For carrier-managed edge services, the metadata specifies what services to provide at the edge. If the edge service is carrier-supplied, the metadata contains enough information to specify and configure that code. If the edge services is tenant-supplied, the metadata includes a pointer to the executable and related information (resource requirements, version number, etc.). This metadata can be updated as needed.
+
+\end{itemize}
+\end{itemize}
+
+\subsection{Client Interface}
+
+Client code can have an arbitrary application-specific interface (\eg in our CDN example, \name does not constrain the interface between the client and the cache), but the client interfaces that concern us here involve how the client interacts with \name. Clients interact with \name in two specific ways:
+\begin{itemize}
+\item {\bf Coordinator:} Each client, when they connect to a new network, register with the Coordinator. The Coordinator might redirect this registration so that the client first authenticates (as specified in the template).  Once a client is registered, it is given the location of the tenant-specific Discovery service. 
+\item {\bf Discovery service:} Clients use the Discovery service to resolve application-specific names (the Discovery service is not just a local copy of DNS, but rather can implement its own name resolution mechanisms). The resolution results can be local in nature, in that the tenant-specified metadata can contain results tailored to each edge, or they can be global (\eg application back-end servers). Client can include authentication token with request, as some bindings might be available only to appropriately authenticated clients. 
+\end{itemize}
+
+For certain classes of applications (\eg mobile applications), it might be beneficial to avoid the additional RTT involved with sending requests to the discovery service. In this case \name allows the use of a more proactive version where the Coordinator returns name-address bindings for the components of a tenant edge application rather than the location of a Discovery service.
+While this avoids the round-trip to get name bindings it reduces the amount of flexibility available: servers and instances of network components must preserve the same address over the course of the application's lifetime.
+
+\subsection{Carrier Implementation}
+
+While the purpose of \name is to make life easier for application developers (to invoke network support), does this make life hard for the carrier? As the preceding description hopefully makes clear, the answer is clearly no.  To build and deploy \name, a carrier needs only: (a) build a simple portal to serve as Coordinator, (b) build a simple name resolver to serve as the Directory service, and (c) deploy racks at their edge that can spin up VMs on demand, thereby instantiating the required edge services (most of which are easily available, like firewalls, or are supplied by the tenants themselves). To validate our idea we built a prototype of the primitives and several applications which made use of them. In our implementation the primitives themselves took only 2,600 lines of C++ code\footnote{As measured by David A. Wheeler's SLOCCount tool.} and took less than a week of programmer time. Thus, we believe building \name involves only standard software engineering best practices.
+
+\eat{
+\begin{outline}
+\1 \fixme{Maybe it would help to have a running example here?}
+\1 Two main interfaces to consider
+    \2 Tenants interface to the carrier.
+        \3 Defined in this paper.
+        \3 Tenants send requests to the coordinator.
+    \2 Clients interface to application components.
+        \3 The application coordinator and discovery service are the only primitives required. 
+            \4 We describe the interface to these below.
+        \3 Other edge services are either provided by the application writer or by carriers.
+            \4 Similar to servers in current client-server architecture, interface is application defined.
+            \4 Explore these in the next section.
+\end{outline}
+
+\subsection{Tenant Interface}
+\begin{outline}
+\1 Tenants interact with the carrier's \emph{coordinator} to get access to network services, set up edge services, make changes to their setup, etc.
+
+\1 The coordinator is a primitive defined by us, provided by the carrier.
+    \2 Primary interface between the carrier and tenants.
+
+\1 To launch a new application service tenants provide a specification that is used by the carrier to instantiate application components at the edge.
+    \2 Specification must be location agnostic \ie can instantiate at any edge.
+        \3 Cannot depend on addresses, use names to route.
+        \3 Cannot require that only a few or a specific number of copies are run.
+
+\1 Tenants provide specification in two parts.
+    \2 First, an abstract invocation. 
+        \3 Lists all the application components and the data flow graph between them. 
+        \3 Includes both the application components that are instantiated and managed by the carrier and those managed by the tenant (or clients).
+            \4 Always includes at least some components not provided by the carrier.
+        \3 Coordinator returns a handle to individual components in this template. The handle is used to bind metadata to specific entities.
+        \3 \fixme{Probably show an example of the invocation?}
+        
+    \2 Second, metadata for each application component
+        \3 Supply both the handle and metadata in some standard form to the coordinator.
+        \3 Metadata always specifies a name, which can be used to route requests from other components.
+        \3 Metadata must specify whether the component is instantiated in the carrier network or is external (\ie managed by another entity).
+        \3 Metadata for external servers specifies their address and possibly other information (certificates) to ensure that the correct server is used.
+        \3 Metadata for carrier instantiated components specifies
+            \4 What service to instantiate: this can include carrier-provided and tenant provided services.
+            \4 Configuration information, the format and contents are specific to the service itself.
+            \4 For tenant-provided services additional information about
+                 \begin{asparaenum}
+                    \item Resource requirements for running the service.
+                    \item A pointer to the executable that needs to be run.
+                    \item Version information.
+                    \item Other information that might be useful to a carrier, for instance information
+                 \end{asparaenum}
+                 
+    \2 Metadata for an application invocation can be updated several times.
+        \3 The coordinator takes care of updating configuration, instantiating new infrastructure components, etc. across all
+           edges.
+        \3 While we provide no guarantee on metadata changes being applied atomically across edges, the coordinator can notify tenant
+        when changes have been successfully applied.
+        
+    \2 Over the lifetime of a service the metadata might change several times both in response to infrastructure changes (for instance moving a server, 
+    deciding that a function is better implemented at the network edge, etc.) and to update software.
+\end{outline}
+
+\subsection{Client Interface}
+\begin{outline}
+\1 Interface between client application and application edge services.
+\1 Two primitives defined by us
+    \2 Application coordinator
+    \2 Discovery service.
+\1 Additional edge services are provided by both tenants and carriers.
+    \2 Actually responsible for performing interesting tasks in our model.
+    \2 Described in the next section.
+\end{outline}
+
+\textbf{Application Coordinator}\\
+\begin{outline}
+\1 Application Coordinator is responsible for bootstrapping client applications.
+    \2 Logically, one instance per application, separation enables isolation for both performance and security.
+    \2 When first started a client application registers itself with coordinator.
+    \2 This might trigger the instantiation of tenant edge services.
+    \2 Might redirect registration request so that client first authenticates.
+    \2 Once registered returns the location of the tenant-specific Discovery service to the client.
+\end{outline}
+
+\textbf{Discovery}\\
+\begin{outline}
+\1 The Discovery service is responsible for binding names to addresses.
+    \2 Names used to refer to all application components, other clients, etc.
+    \2 Names belong to an application specific namespace, logically an instance per application.
+\1 Edge local bindings
+    \2 Name bindings for carrier instantiated components point to local instances, \ie instances in the current edge.
+    \2 Name bindings for clients can be restricted to local edge.
+    \2 Bindings for some services, for instance tenant instantiated components can be globaly relavant.
+\2 When sending requests, applications query Discovery service to find address for component.
+\2 Client can include authentication token with request, some bindings might be available only to appropriately authenticated clients.
+\end{outline}
+
+\begin{outline}
+\1 For certain classes of applications, \eg mobile applications, it might be beneficial to avoid the additional RTT involved with sending requests to
+   the discovery service.
+    \2 In this case our framework allows the use of a more proactive version where the coordinator returns name-address bindings for the components of
+       a tenant edge application rather than the location of a discovery service.
+    \2 While this avoids the round-trip to get name bindings it reduces the amount of flexibility available: servers and instances of network components
+    must preserve the same address.
+\end{outline}
+}
+
+\eat{
+\begin{outline}
+\1 Tenant $\rightarrow$ ISP
+    \2 Two parts: invocation and metadata
+    \2 Invocation
+        \3 Specify what to launch
+        \3 Logical message flow
+        \3 Show example
+    \2 Metadata
+        \3 Where to launch/where located
+        \3 Version/other information about what to launch
+        \3 Configuration
+        \3 Some examples
+\1 Tenant $\rightarrow$ Services
+    \2 Use discovery to find services (similar to name services today)
+    \2 Interface is otherwise dependent on service.
+\end{outline}
+}

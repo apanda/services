@@ -1,0 +1,100 @@
+\documentclass{sigcomm-alternate}[10pt,letterpaper]
+\usepackage{outlines}
+\usepackage{graphicx, subfigure, multirow, times, balance, color}
+\usepackage{balance, hyperref, amsfonts, verbatim, mathtools, paralist, cite}
+\usepackage{graphicx, xspace, subfigure}
+\usepackage{comment}
+\usepackage[letterpaper,hmargin={1in,1in},vmargin={1in,1in}]{geometry}
+\usepackage[small]{caption}
+
+\renewcommand{\ttdefault}{cmtt}
+
+\newcommand{\sectionskip}{-0em}
+\newcommand{\subsectionskip}{-0em}
+\usepackage{mdwlist}
+
+\newenvironment{myitemize}
+{
+   \vspace{0mm}
+    \begin{list}{$\bullet$ }{}
+        \setlength{\topsep}{0em}
+        \setlength{\parskip}{0pt}
+        \setlength{\partopsep}{0pt}
+        \setlength{\parsep}{0pt}         
+        \setlength{\itemsep}{1mm} 
+}
+{
+    \end{list} 
+    \vspace{-1em}
+}
+
+\newcommand{\bi}{\begin{itemize}}
+\newcommand{\ei}{\end{itemize}}
+\newcommand{\im}{\item}
+\newcommand{\eg}{{\it e.g.,}\xspace}
+\newcommand{\ie}{{\it i.e.,}\xspace}
+\newcommand{\name}{NSS\xspace}
+%\newcommand{\abtest}[2]{#1}
+% Uncomment to choose 2 
+%\renewcommand{\abtest}[2]{#2}
+
+\newcommand{\allnotes}[1]{}
+% To make the FIXMEs go away, comment out this line...
+\renewcommand{\allnotes}[1]{\textit{#1}}
+\newcommand{\eat}[1]{}
+\newcommand{\fixme}[1]{\allnotes{\bf\textcolor{red}{[#1]}}}
+\newcommand{\notescott}[1]{\allnotes{\textcolor{blue}{[Scott: #1]}}}
+\newcommand{\noteteemu}[1]{\allnotes{\textcolor{green}{[Teemu: #1]}}}
+\newcommand{\notepanda}[1]{\allnotes{\textcolor{cyan}{[Panda: #1]}}}
+\newcommand{\notebarath}[1]{\allnotes{\textcolor{red}{[Barath: #1]}}}
+\newtheorem{theorem}{Theorem}
+%\newtheorem{proof}{Proof}
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{defn}[thm]{Definition}
+\newtheorem{obs}[thm]{Observation}
+\newtheorem{lemma}[thm]{Lemma}
+\newtheorem{definition}{Definition}
+\def\squarebox#1{\hbox to #1{\hfill\vbox to #1{\vfill}}}
+
+\newcommand{\xref}[1]{\S\ref{#1}}
+
+\sloppy
+\interfootnotelinepenalty=10000
+
+\begin{document}
+
+
+\title{Open Network Interfaces for Carrier Networks}
+\author{Aurojit Panda$^\ddag$, Murphy McCauley$^\ddag$, Amin Tootoonchian$^{\natural\dag}$, Justine Sherry$^\ddag$\\
+Teemu Koponen$^\diamond$, Sylvia Ratnasamy$^\ddag$, Scott Shenker$^{\ddag\natural}$\\
+\rm{$^\ddag$ UC Berkeley, $^\natural$ ICSI, $^\dag$ UToronto, $^\diamond$ Styra}\\
+\rm{\{apanda, murphy, justine, sylvia\}@cs.berkeley.edu, amin@cs.toronto.edu, koponen@styra.com, shenker@icsi.berkeley.edu\vspace{-2.4in}}
+}
+\date{}
+\maketitle
+\begin{abstract}
+{\em With the increasing prevalence of middleboxes, networks today are capable of doing far more than merely delivering packets. In fact, to realize their full potential for both supporting innovation and generating revenue, we should think of carrier networks as service-delivery platforms. This requires providing open interfaces that allow third-parties to leverage carrier-network infrastructures in building global-scale services. In this position paper, we take the first steps towards making this vision concrete by identifying a few such interfaces that are both simple-to-support and safe-to-deploy (for the carrier) while being flexibly useful (for third-parties).
+}
+\end{abstract}
+% Uncomment this for removing page number only on the first page
+%\thispagestyle{empty}
+
+% No page numbers
+%\pagestyle{empty}
+\input{intro}
+\input{scenario}
+%\input{primitives}
+\input{interfaces}
+\input{edgeservices}
+\input{examples}
+\input{discussion}
+\section{Acknowledgment}
+We thank the anonymous reviewers for their helpful comments and suggestions which have helped improve this paper. This research was supported in part by NSF grants 1343947 and 1420064, and funding provided by Intel Corporation.
+\balance
+%\footnotesize{
+  \bibliographystyle{abbrv}
+  \bibliography{alinsimple}
+%}
+
+\end{document}
+

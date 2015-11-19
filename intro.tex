@@ -1,0 +1,132 @@
+\section{Introduction}
+\label{sec:intro}
+
+In the early days of the Internet, there was a very clear division of labor between the network infrastructure and application developers. It was the network's job to deliver packets quickly and reliably, while it was the application developer's job to build applications using the end-to-end model (\ie expecting no direct network support other than best-effort packet delivery). These early efforts resulted in the seminal Internet applications on which we now rely (email, the web, etc.).  Most of these applications were built around a client-server model, so that as the age of datacenter-scale services arose the end-to-end protocols needed little change (though significant innovation was needed to scale the internals of the datacenter, including the networking infrastructure). 
+
+However, the world has changed greatly since those early days. Two developments in particular have blurred this previously clear division of labor between application developers and the network: the rise of middleboxes (or network appliances) and the increasing importance of the network edge. 
+
+Middleboxes have become the most common way of deploying new in-network functionality, and according to a recent study\cite{sylviamidbox} most networks have roughly an equal number of routers, switches, and middleboxes. Among the many middleboxes found in these networks are HTTP proxies, SIP proxies, WAN optimization, deep-packet-inspection, content caching, and content transcoding. 
+
+In the Internet age, Ben Franklin's adage ``time is money" has become an empirically verified fact. Lowering response latency keeps viewers longer, which translates into increased advertising revenue. Placing services at the network edge helps reduce both latency and the load on the network backbone. As a result, many companies (\eg Netflix, Google, and Akamai) have placed some of their widely-used services at the edge.  And this trend may accelerate as the Internet-of-Things, with its potential for generating large volumes of streaming data, will require even more edge data processing.
+
+As a result of these trends, network involvement in Internet applications is both {\em possible} (due to the presence of middleboxes) and {\em desirable} (given the importance of placing functionality at the network edge, to reduce latency and backbone bandwidth). While we continue to pay lip-service to a clean division between applications and network infrastructure, and that model still suffices for some applications where latency and bandwidth are not major concerns (such as online banking), this is no longer the dominant reality. Rather than resisting this trend, we should embrace it by viewing network infrastructure not merely as a packet delivery mechanism, but as a more general {\em platform for supporting services}. 
+
+Carriers (\eg NTT and Verizon) are perfectly positioned to take advantage of this trend. They have ubiquitous presence at the edge of their own network and, due to the rise of SDN and NFV, can flexibly insert middleboxes there. In addition, carriers have extensive experience with 24/7 operations on their infrastructure. However, carriers have not effectively responded to this opportunity. They have attempted to build services themselves, such as CDNs, but their efforts are widely seen as too-little-too-late and have had little impact on the Internet ecosystem. While carriers can provide premium connectivity to those providing popular services (witness the recent Netflix-Comcast deal), and allow third-parties (such as Akamai and Netflix) to place their own equipment at the carrier edge, their infrastructures are still designed primarily around packet delivery.
+
+We advocate a much more active role for carrier networks, one that is best motivated by considering the history of Amazon's EC2 service. To support their own business, Amazon built a set of large datacenters. They then recognized that these datacenters could be useful to others, and that offering up this computational infrastructure as a service could be profitable. To take advantage of this opportunity, they developed a tenant-facing service interface (the EC2 VM interface) that had six important properties (where we use the term tenant to refer to EC2 customers):
+\begin{compactitem}
+\item {\bf Simple to support}: The VM interface is well-established, and required little technical innovation to support.
+\item {\bf Safe to deploy}: VMs provide isolation (protecting both other tenants and Amazon itself) and Amazon carefully manages resource allocations; the combination ensures that a tenant's use of EC2 poses no threat to Amazon, or other tenants (in terms of security and resource usage).
+\item {\bf Self-service}: No manual intervention by Amazon is needed for a tenant to use the EC2 service.
+\item {\bf Usage-based}: Tenants are charged based on usage, and (for small resource requirements) do not have to reserve resources in advance. Moreover, tenants that are more forgiving of failures can use cheaper options, such as spot-pricing, that are less reliable.
+\item {\bf Flexible}: One can develop useful services using this interface, and the space of services enabled by the infrastructure far exceeds what anyone could have envisioned. In fact, the Amazon business model had the flavor of ``{\em we don't know the future, but we sure hope someone builds it on our infrastructure}'', which is a way of profiting from grass-roots innovation.
+\item {\bf Narrow}: The service interface is narrow enough that Amazon had the freedom to innovate in how it was implemented, allowing it to improve the efficiency of its infrastructure without changing the interface. 
+\end{compactitem}
+
+The fact that EC2 was self-service and usage-based lowered the barrier-to-entry for these datacenter services, opening the world of large-scale computing to everyone (in fact, in 2011 one could rent the 30th fastest supercomputer for a little over \$1000/hour!). This enabled everyone to scale services without running their own infrastructure. Amazon's ability to support scalable services, while protecting their own infrastructure, has spurred innovation in Internet services and made Amazon a tidy profit in the process.
+
+In this paper, we propose an initial step carriers could take to emulate the EC2 example. We call our system \name, for {\em Network Service Support}, and put it forward not for the sake of the carriers, whose business prospects are not our concern, but to hopefully increase the rate of innovation in network services and broaden how we think of the network service model. Our focus is not on the design details or implementation  issues, but instead on the basic interfaces operators could expose and how they might be used.  
+
+\name is exceedingly simple for carriers to build, and exposes an interface with three main components:
+
+\begin{compactitem}
+\item {\bf Tenant-facing invocation interface:}  This is how the tenant invokes \name, and describes the desired high-level application interaction pattern. This interface abstracts away low-level details, enabling seamless changes (by both tenants and carriers) in the low-level infrastructure.
+\item {\bf Client-facing primitives:} These include registration and name resolution.
+\item {\bf Edge services:} These are services, such as caches or firewalls, that the tenant can instantiate at the edge (through the invocation interface).
+\end{compactitem}
+
+\name has the same six properties as listed above for EC2, and enables third-parties (tenants) to  build services, offered to clients (customers of the tenant), that leverage the network infrastructure. Thus, \name allows application designers to focus on what they do best -- searching for unmet needs and figuring out the right way to meet them -- and lets the network infrastructure make deployment simpler (because the application designer can use a set of basic primitives, and need not worry about how to scale the network-based portion of the service) and more effective (given the proximity to the edge). 
+
+This obviously resembles current systems like Akamai, which uses edge caches and name resolution to speed content delivery. In fact, {\em that's our point!} Systems like Akamai are extremely valuable and our goal is to make them easier to deploy. We discuss later how \name could trivially support an Akamai-like service with very little tenant-supplied infrastructure.
+
+Our approach imposes no significant changes on applications, in terms of the interactions between clients and servers. This is because we are not exploring new application architectures, only new deployment and configuration models for network-based applications. Our approach lets functionality be placed at the edge where needed (\ie where the clients are), without the tenant needing to know beforehand where these clients might arise nor having to deploy the edge functionality themselves. Moreover, the configuration (in terms of who the client contacts to access a particular service) is handled by the service primitives we have designed. In this sense, our approach is similar to SDN, which did not change how packets are forwarded, but did change how that forwarding behavior is computed and configured.
+
+We are certainly not the first to write about the role of networks in supporting services. There has been recent research on enabling service {\em invocation} \cite{netcall}, which exposes various network services to end users. This rightly moves service invocation from implicit dataplane actions to explicit control plane interfaces. But our focus is on service {\em construction}, using the existing network infrastructure, which is quite different (and complementary). There has also been a long history of work on service {\em composition} \cite{samimi2008dynamis, oppenheimer2006service}, and more recent developments with an emphasis on the cloud \cite{larry}, but this typically involves chaining together several high-level services, such as file servers, databases, and the like, and requires interfaces suitable for general distributed programs. Our focus is on utilizing a narrow set of low-level network services, so our interfaces need not be so general or work in such a broad set of contexts.  Thus, our problem is far easier, and we do not have to confront the deeper problems explored in the general service composition literature.
+
+Of course, the technical community has been actively developing the SDN and NFV paradigms (with a burgeoning literature), which are useful mechanisms for implementing what we describe here, but neither directly address the question of how one uses the network to seamlessly support third-party applications.
+
+\begin{outline}
+
+\eat{\1 In the beginning of the public Internet, there was a fairly clear division of labor:
+    \2 It was the network's job to deliver packets quickly and reliably
+    \2 It was the application developer's job to invent new end-to-end applications (email, etc.)
+\1 Most applications were built around a client-server model, so the transition to datacenter-based services was rather smooth
+    \2 The transition did require significant innovation to scale the internal operations of datacenters, but the end-to-end network protocols needed little change
+\1 However, two more recent (but hardly new) developments have blurred this clear division of labor:
+    \2 The prevalence of middleboxes in augmenting network functionality \cite{sylviamidbox}
+        \3 Content transcoding (VOIP)
+        \3 Content caching (CDN)
+        \3 WAN optimization
+        \3 Security appliances
+        \3 HTTP proxies \fixme{the last two are mechanisms used by the following above use cases, so not probably need to mention them}
+        \3 SIP Proxies
+    \2 The importance of the edge 
+        \3 in reducing latency
+            \4 Comments about time is money from executives
+        \3 in reducing bandwidth on backbone
+            \4 Currently most important for video
+            \4 But in the future may be needed for IoT, where massive amounts of monitoring data could be processed at the edge
+        \3 In fact, Akamai, Amazon, Google all place functionality at edge (true?)
+\1 As a result of these trends, the relationship between networks and global-scale applications is more complicated than the previous simple and clear division of labor.
+    \2 Direct network involvement is more possible, due to to middleboxes providing more than just forwarding
+    \2 Direct network involvement is more desirable
+        \3 For application developers reduces latency.
+        \3 For network operators reduces bandwidth demand on the backbone.
+        
+\1 We have moved beyond the point where application builders are just building true end-to-end applications on top of a cleanly layered internet service (though that suffices from some applications, like Internet commerce and banking services, where the client-service model is cleanly applicable and low-latency not terribly important)
+    \2 And are now fully embracing the model where the network infrastructure is leveraged to provide application support
+    \2 Thus one should look at the network infrastructure not merely as a packet delivery mechanism, but more generally as a service platform. 
+    
+\1 Carriers are perfectly positioned to take advantage of these trends:
+    \2 Presence at the network edge
+    \2 Ability to insert middleboxes on path as desired
+    \2 24/7 management and monitoring infrastructure
+\1 However, carriers have not fully responded to this opportunity
+    \2 Attempted to build services themselves (the everlasting attempt to define ISP CDN standards), but too slow moving to make significant impact
+        \3 Current services limited to selling premium connectivity towards content providers eyeballs through peering
+    \2 Allowed third-parties to install equipment (Akamai, NetFlix, Google???), but this only helps large companies able to install and manage their own large infrastructure, rather than letting others more directly leverage the existing carrier infrastructure \fixme{reword!}
+\1 We think carriers should follow the model of Amazon, where
+    \2 Amazon build a computational infrastructure for its own purposes (datacenters)
+    \2 Rather than keeping it only for its own use, it realized that it could make money by offering it to others
+    \2 Provided an interface that was:
+        \3 Safe: by using VMs, and carefully managing resources, a tenant's computation poses no threat to Amazon, or other tenants
+        \3 Self-service: no manual intervention is needed for a tenant to use the EC2 service
+        \3 Usage-based: tenants are charged based on usage, and do not have to reserve resources in advance
+        \3 Useful: can build one or more useful services using this infrastructure
+        \3 Flexible: the space of services enables by the infrastructure far exceeds what we can currently envision
+        \3 Narrow (or decoupled): the provider has freedom to innovate and improve the efficiency of its infrastructure further without changing the interface. 
+    \2 As a result, EC2 lowered the barrier-to-entry to datacenter-based services, placing them within reach of all -- and continues to improve the operational efficiency at impressive rate.
+        \3 Protected own infrastructure, while generating new revenue and spurring innovation
+
+\1 In this paper, we try to emulate the EC2 example for carriers, by identifying an interface for carrier networks that has these six properties. The interface involves:
+    \2 A set of low-level primitives
+        \3 Edge-based services
+        \3 Registration services
+    \2 An abstract invocation (or access?) interface
+        \3 Describes the high-level interaction pattern
+        \3 Allows for seamless changes in the low-level infrastructure
+        \3 \fixme{Separates the task of designing applications and servers from providing scalability in response to increasing demand.}
+        
+
+\1 This approach involves little change in how functions are designed, at least initially
+    \3 The interactions between clients and servers is the same
+    \3 But fuctionality can be placed at the edge
+    \3 And the configuration of the interaction is handled automatically
+    \3 In that way, it is similar to SDN, which doesn't change how packets are forwarded, but changes how that forwarding behavior is configured!
+
+\1 However, the goal is to greatly change the innovation model by allowing anyone to develop global-scale network services that leverage the carrier's infrastructure.
+
+\1 We are certainly not the first to write about network and their role in services.
+    \2 There has been research on enabling service {\em invocation} \cite{netcall}, which exposes various network services to end users
+        \3 This rightly moves service invocation from implicit dataplane actions to explicit control plane interfaces
+        \3 But our focus is more on service {\em construction}, using the existing network infrastructure, which is quite different
+    \2 There has been a long history of work on service {\em composition}
+        \3 but this typically involves chaining together several high-level services, such as file servers, databases, and the like, and requires interfaces suitable for general distributed programs
+        \3 our focus is on utilizing a narrow set of low-level network services, and our interfaces need not be so general
+
+\1 And the technical community has developed new paradigms, SDN and NFV
+    \2 These are useful mechanisms for implementing some aspects of our approach
+    \2 But neither addresses the larger question of how one constructs network services
+    \2 This is the focus of this position paper
+}
+\end{outline}

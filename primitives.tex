@@ -1,0 +1,82 @@
+\section{Primitives}
+\label{sec:primitive}
+\fixme{Need to find better names.
+\begin{enumerate}
+\item Infrastructure Component: A single piece of software (say a cache) situated at the network edge.
+\item Application edge: The collection of all software at the edge (the thing kind of dictated by the abstract invocation?
+\end{enumerate}
+}
+
+\fixme{Maybe merge this with Interfaces}
+
+\begin{outline}
+%\1 Unless otherwise stated primitives are per-tennant. Coordinator is the only exception to this rule.
+\1 Coordinator
+    \2 Interface for providing information to the network.
+    \2 Responsible for:
+        \3 Accepting abstract invocations and returning a handle.
+        \3 Accepting metadata for an invocation handle.
+        \3 Disseminating invocations and metadata.
+        \3 Instantiating tenant invocations at the network edge.
+    \2 The only service that is not per-tenant. 
+
+\1 Discovery
+    \2 Local name lookup service: translates a name in the tenant namespace to the address of a nearby provider.
+    \2 Is edge aware (so finds services connected to the same edge).
+    \2 Can potentially mark entries as requiring authentication: these entries are only visible to clients that have somehow been authenticated.
+    \2 We allow clients to be registered as destination, this is useful for things where peer-to-peer connection is desirable.
+    \2 Glues services together.
+    \2 As an optimization discovery can be eliminated
+        \3 Registering a client proactively returns an address
+        \3 The address is used for all communications thereafter.
+        \3 Main difference:
+            \4 Proactive discovery reduces the latency to access services (by at least 1 RTT). 
+            \4 Discovering on demand provides greater flexibility: 
+
+\1 Other Infrastructure Components
+    \2 Per-tenant services implemented at the edge.
+    \2 Some of these are common enough that should be implemented by carriers.
+    \2 Some examples
+        \3 Caches
+        \3 Rendezvous proxies
+        \3 Transcoders
+        \3 Others
+    \2 How to ensure safety
+        \3 Isolation: Just use VMs or other existing things.
+        \3 Network safety: Limit where traffic can be sent, rate limit to ensure network is not affected
+
+\eat{\1 Things to consider when writing a new edge service.
+    \2 Configuration must be location and ``scale'' agnostic.
+        \3 In particular should not assume that only a certain number of instances are being run.
+        \3 No assumption about where this edge service is being run, no hard coded addresses etc.
+    \2 Send requests to other edge services by name.
+        \3 A natural consequence of being location agnostic.
+    \2 Should not depend on any implicit consistency between edge instances.
+        \3 Can explicitly choose to synchronize content using a central server or other mechanism.
+        \3 Must not assume anything about latency between instances, instances might be far away geographically.
+        \3 In particular this means that client data should only be cached at the edge in most cases
+            \4 Mobility would require synchronizing user data somehow.
+        \3 \notepanda{Consistency seems hard to provide across different types of services}
+    \2 The edge service might be affected by both soft state and configuration.
+    \2 \fixme{Figure out other requirements for edge services}
+}
+
+\eat{\1 Discovery: Global/Local
+    \2 Nameservice: glue holding this all together.
+    \2 Local discovery: add local information to normal name service.
+    \2 Per-tenant: avoids name collision
+        \3 Safety.
+    \2 Allow lookups protected by authentication
+\1 Edge services
+    \2 A variety of per-tenant services implemented at the edge.
+        \3 Introduce why this is reasonable: edge has plenty of cores, etc.
+        \3 Per-tenant implies safe (cannot affect other tenants).
+        \3 At edge, so network protected by the same mechanism as now.
+    \2 Examples
+        \3 Caches
+        \3 Rendezvous proxies (SIP proxies, other things).
+        \3 Transcoders
+        \3 Application-specific
+        \3 etc.
+}
+\end{outline}

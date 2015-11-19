@@ -1,0 +1,133 @@
+\section{Example Usage}
+\label{sec:example}
+%\notepanda{Editing/Token}
+
+%\fixme{insert Akamai-killer example}
+Moving beyond the CDN example of Section \ref{sec:scenario}, and obvious extensions such as SIP proxies, we now look at a few examples of more complicated applications that could be supported by \name.
+
+\subsection{Edge Based Multicast}
+
+Video content providers often need to transfer the same content to multiple devices. This might be either for live streaming (for sports events, lectures, etc.) or for other cases where we want users to be able to watch the same video stream on multiple devices seamlessly. While one can solve this problem by running several unicast streams, doing so increases utilization on the transit links.  
+In a network where services can be placed at the edge of a network one can instead send a single stream to an edge service, which can replicate and send it to all local clients. A multicast overlay like this requires no internal network support from the carriers, and works across carriers. 
+
+\subsubsection*{Instantiation and Usage}
+\indent\indent\textbf{Template:} $$\text{Origin Server} \rightarrow \text{Edge Proxy} \rightarrow \text{Clients}$$
+
+\textbf{Metadata}: The Edge Proxy is the only carrier-instantiated application component. Metadata in this case provides an address for the origin server. The tenant can require that clients authenticate before getting access.
+
+\textbf{Usage}: Once this template has been instantiated by the carrier, clients initiate sessions (for particular streams) with the edge proxy. The edge proxy is responsible for receiving the stream from the origin server and multicasting it to all local clients. 
+Edge proxies can subscribe to streams from the origin server either on demand (\ie when they have active sessions for a stream) or proactively.
+
+As an alternative, the edge proxy can proactively initiate sessions for popular streams (for instance World Cup games) with the origin server ahead of time thus reducing initial latency for all clients.
+
+\subsection{ICN}
+
+Previous work has argued that Information Centric Networking \cite{ccn,dona}, where content can be accessed using names instead of requiring clients to provide IP addresses, can lower response latency, provide additional security and better mobility and reduce bandwidth consumption. Recent work~\cite{fayazbakhsh2013less} has shown that one can achieve most of these benefits using name-based caches at the edges. Using our mechanisms a tenant can deploy a system similar to what was envisioned by~\cite{fayazbakhsh2013less} without requiring any additional carrier support.
+
+\subsubsection*{Instantiation and Usage}
+\indent\indent\textbf{Template:} 
+\begin{align*}
+\text{Client} \rightarrow \text{Proxy} \rightarrow \text{Name Resolution} \rightarrow \text{Origin Server}
+\end{align*}
+
+\textbf{Metadata}: The proxy and possibly the name resolution service are carrier instantiated. The tenant can require clients to authenticate before obtaining access.
+
+\textbf{Usage}: Clients can use this service exactly as described in~\cite{fayazbakhsh2013less}: requests for named data are sent to the proxy which either responds to these from its local cache or uses the \emph{name resolution} service to locate the data in the origin server. This name resolution service can be tuned to support flat names, thereby supporting arbitrary naming systems (and, in particular, content-centric names).
+
+\subsection{Storage Synchronization}
+
+Storage services such as Dropbox, Box and AeroFS synchronize content across user devices. To lower latency and reduce data sent through the network core these services include support for synchronizing local clients (\ie devices connected to the same local network) without involving a remote storage server. In this case, the Discovery service can allow clients to discover all other local clients, greatly simplifying the development of such applications.
+
+\subsubsection*{Instantiation and Usage}
+\indent\indent\textbf{Template:} 
+\begin{align*}
+\text{Client} \rightarrow \text{Authentication} \rightarrow \text{Client Registration}
+\end{align*}
+
+\textbf{Metadata}: Application registration is carrier instantiated. Depending on the service an application writer can choose to use a carrier-provided authentication service or one provided by third-parties.
+
+\textbf{Usage}: Once authenticated, clients can contact the \emph{application registration} service to be added to the list of clients belonging to a user currently connected to a network edge. This mapping is maintained (and queried) using the Discovery service at the local edge. 
+
+\subsection{Edge Processing for Sensors}
+
+Recently, there is growing interest in collecting and aggregating data from sensors embedded in ``smart'' objects, 
+which form the \emph{Internet of Things} (IoT). As a whole these sensors can generate huge amounts of data; for 
+instance it is reported that the engines on a Boeing 777 generate over 4 terabytes of data during a trans-Atlantic
+flight. Transferring this raw data to data centers for processing can be costly and contribute
+to congestion at the core. Often, the data can be processed, either to limit its size while retaining information
+required for processing or to speed up initial analysis~\cite{sidirourgos2011sciborq}. Tenants can use our mechanism
+to perform this processing, on-demand, at the edge.
+
+\subsubsection*{Instantiation and Usage}
+\indent\indent\textbf{Template}:
+\begin{align*}
+\text{Sensor} \rightarrow \text{Processing} \rightarrow \text{Data Center}
+\end{align*}
+
+\textbf{Metadata}: Tenants supply code for the processing service: since the functionality is dependent on both
+the sensor and the query being executed this might be highly-specialized for each client.
+
+\textbf{Usage}: Sensors lookup and send traffic to edge processing units which then forward the processing results
+to the data center. Clients can issue queries and look at results by connecting to the data center.
+
+\subsection{Middlebox Outsourcing}
+
+Recent work~\cite{sylviamidbox} has also proposed outsourcing middlebox functionality to data centers, both to
+simplify administration and take advantage of consolidating this functionality for several enterprises. This work
+proposed outsourcing this functionality to a data center, where these middleboxes are run on virtual machines. Using
+NSS one can instead outsource this functionality to the network edge, rather than to the middleboxes and thus potentially reduce latency. This is also an example where traffic is sent through the service transparently.
+
+\subsubsection*{Instantiation and Usage}
+\indent\indent\textbf{Template}:
+\begin{align*}
+\text{Traffic Class} \rightarrow \text{Middlebox Pipeline}
+\end{align*}
+
+\textbf{Metadata}: The metadata in this case specifies the middlebox pipeline (a sequence of middleboxes, or more generally a DAG of middleboxes), and the configuration of each middlebox.
+
+\textbf{Usage}: All packets belonging to the specified traffic class are forwarded to the middlebox, which then 
+processes this traffic and forwards it as appropriate. 
+
+\eat{
+\begin{outline}
+%\1 VPN \fixme{Remove?}
+\1 Lots of obvious uses based on what is done today
+    \2 SIP termination proxy.
+    \2 CDN.
+\1 Below walk through a few more complex/interesting applications.
+\1 Dropbox
+    \2 \fixme{Add from previous submissions}
+\1 Proximity based media services?
+    \2 Customers commonly have multiple TVs, computers, etc. at home.
+    \2 A recent class of applications allow customers to continue watching the same video stream while moving around the house between screens.
+    \2 This might require starting a new session every time the user moves. An easier way to do this is provided by an edge service that receives the stream
+       and redirects it according to the instructions of a control plane.
+        \3 A phone or other device can tell the service provider about proximity to a device.
+        \3 Service provider can update the edge service to redirect stream.
+    \2 Similarly, the edge can also serve as a mechanism to inform other devices of what a user is watching and where in the stream she is.
+        \3 This allows application like HBO Glass which require close synchronization between content on different devices.
+\1 ICN (Vyas+Amin's kind)
+    \2 \textbf{Scenario}: Content provider wants to provide a name-based content cache. Recent work~\cite{fayazbakhsh2013less} has shown that one can
+    achieve many of the performance, security and mobility benefits of ICN using such caches. More practically the use of named content caches can reduce
+    perceived latency for websites, reduce load on the origin server, etc.
+    \2 \textbf{Abstract Invocation}: $\text{Client} \rightarrow \text{Content Cache} \rightarrow \text{Origin Server}$.
+    \2 \textbf{Metadata}:
+        \3 Client: Externally instantiated.
+        \3 Content Cache: Carrier instantiated, name based content cache (can be either carrier or tenant provided).
+        \3 Origin server: Externally instantiated managed by the tenant.
+    \2 \textbf{Usage Reactive Discovery}:
+        \3 User launches client. Client registers with Application Coordinator, gets access to Discovery service.
+        \3 For each request client:
+            \4 Uses Discovery service to find cache, sends request to cache.
+            \4 If cache does not have content, cache sends request to the origin server and caches response.
+            \4 Cache returns content to client.
+        \3 Carrier can enforce policy that no request from the client is directly forwarded to origin server.
+        \3 Nothing special, similar to how things work now, just easier to spin up a new service.
+    \2 \textbf{Usage Proactive Discovery}:
+        \3 User launches client. Client registers with Application Coordinator, gets address for edge cache instance.
+        \3 For each request client:
+            \4 Sends request to cache which behaves as before.
+        \3 Client registration periodically timesout.
+            \4 Periodic timeouts to re-register with Application Coordinator provides a mechanism to update clients with new address for cache.
+\end{outline}
+}

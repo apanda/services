@@ -1,0 +1,76 @@
+\section{Edge Services}
+\label{sec:edgeservices}
+Allowing applications to utilize services running at the network edge are the key feature enabled by \name. We envision that these will be provided by both tenants (for services tuned to a specific applications) and carriers (for commonly used services). We assume most edge services will run as VMs (as in NFV) on traditional software servers deployed at the edge of the network. Many existing service implementations can be deployed at the network edge almost unmodified. However, since carriers will deploy these edge services on-demand, at multiple network edges, these services must meet a few requirements that we highlight below.
+
+\subsection{Edge Service Requirements}
+To allow carrier to deploy services at multiple network edges and so these services can be started and stopped on-demand, we require that:
+\begin{itemize}
+\item Edge services rely on configuration that is location and scale agnostic. In particular, the correct and efficient functioning of edge services should not depend on the number of copies running on the same network, and the edge service should make no assumption about the geographic location or the IP address for the VM in which it is executed. 
+\item Edge services send requests to other services by name, \ie edge services must themselves use the \emph{Discovery} mechanism provided by \name rather than using hardcoded addresses for services. The use of names instead of addresses allows carriers to launch and teardown individual edge service instances without affecting application functionality.
+\item Edge services store state in a manner than enables elastic scaling; \ie state that needs to persist across multiple sessions from the same user is persisted elsewhere (not on the edge services).
+\item Consistency between edges must be handled explicitly, for instance with the use of a central server to which all edge services talk. This limitation means that applications supporting transparent mobility must provide mechanisms to synchronize user sessions across edges.
+\end{itemize}
+
+While these requirements seem stringent, many existing services (caches, SIP proxies, etc.) already meet these requirements. Further, services meeting these requirements can be trivially scaled (even on the same edge) by launching additional copies.
+
+We expect that these requirements themselves would evolve over time, in particular many of these requirements can be eliminated by the addition of other features. For instance, carriers can divide the network edge into coarse grained availability zones and allow tenants to restrict their instances to particular availability zones. Similarly, carriers can provide state management services and thus enable edge services that require more permanent state. In addition, in the future one might want to add monitoring hooks as a requirement, so that tenants could more easily monitor (and debug) the global operation of their applications. Thus, the requirements here are merely a first step and are designed to simplify the development and deployment of \name.
+
+
+\subsection{Example Services}
+Next we present a few example edge services. We mostly list services that are general and commonly used, and hence might be provided by carriers. Some applications would undoubtedly provide their own edge services (\eg for application-specific transcoding or data processing).
+
+\textbf{Caches:} The ability to deploy caches at the network edge can greatly reduce traffic through the network core and perceived client latency. Additionally, many carriers already provide caches as a part of CDNs.
+
+\textbf{Client Registration:} A client registration service can add name bindings (accessible through the Discovery mechanism) for clients at the network edge. This can be used for a variety of purposes including finding all devices belonging to a user connected to a particular edge and finding all devices that have specific content. The registration service can accept an authentication token that must be provided to discover certain bindings.
+
+\textbf{Authentication:} A carrier (or other provider, for instance Google) might choose to offer an authentication mechanism that can be optionally used by tenants. Such an authentication service would be token based (\eg based on Kerberos), and requires clients to authenticate using credentials provided by the provider.
+
+\eat{
+\begin{outline}
+\1 Edge services can be provided by a variety of players including
+    \2 Tenants who design a service specifically for an application.
+    \2 Carriers who might provide a library of commonly used services.
+    \2 Other vendors.
+
+\1 Behave like servers running at the edge of the network
+    \2 Running in VMs (for isolation) hosted on physical machines at the edge.
+    \2 A few additional requirements described below.
+        \3 Required for automatic scaling.
+\end{outline}
+
+\subsection{Edge Service Requirements}
+\begin{outline}
+\1 We place a few requirements on edge services. These are
+    \2 Configuration must be location and ``scale'' agnostic.
+        \3 In particular should not assume that only a certain number of instances are being run.
+        \3 No assumption about where this edge service is being run, no hard coded addresses etc.
+        \3 This allows for automatic scaling and instantiation based on usage.
+        \3 Separates responsibility between tenant (responsible for correctness) and carrier (responsible for scaling and performance).
+    \2 Send requests to other edge services by name.
+        \3 A natural consequence of being location agnostic.
+    \2 Should not depend on any implicit consistency between edge instances.
+        \3 Can explicitly choose to synchronize content using a central server or other mechanism.
+        \3 Must not assume anything about latency between instances, instances might be far away geographically.
+        \3 In particular this means that client data should only be cached at the edge in most cases
+            \3 Mobility would require synchronizing user data somehow.
+        \3 \notepanda{Consistency seems hard to provide across different types of services}
+     \2 \fixme{Figure out other requirements for edge services}
+     
+\1 The edge service might be affected by both soft state and configuration.
+    \2 Soft state here could be things like cache contents, edge specific configuration, etc.
+\end{outline}
+
+\subsection{Some Example Edge Services}
+\begin{outline}
+\1 \textbf{Authentication}
+    \2 Authentication is token based, \ie after authentication generates a token that can be verified by others
+        \3 Allows for protocols like Kerberos.
+    \2 For bootstrapping, all clients should be allowed to discover authentication instances.
+    \2 We envision that several tenants would choose to use their own (pre-existing) authentication infrastructure rather than using a carrier-provided 
+       version.
+        \3 Carrier provided version is just meant to provide an alternative for new services.
+        \3 Carrier is responsible for ensuring security, etc.
+\1 \textbf{Caches}
+\1 \textbf{Other...}
+\end{outline}
+}

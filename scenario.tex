@@ -1,0 +1,51 @@
+\section{Idealized Scenario}
+\label{sec:scenario}
+
+In this section we move beyond motivation to a discussion of how this \name might be used in a highly-idealized scenario (where all complicating details are omitted). Consider for instance an application designer (henceforth referred to as the tenant) who would like to deploy a new CDN specifically tuned for video content that would benefit from network support. She begins by dividing functionality between the client (which runs on one or more user devices), a cache service (running at the network edge) and the back-end servers (running in a cloud) where the content is hosted. 
+
+She then picks cache and server implementations that meet her application requirements, with the only \name-specific requirement being that the client code uses \name-supplied primitives for bootstrapping. To deploy this service she now contacts the carrier to find the name of a {\em Coordinator} (a carrier portal) and provides the Coordinator with an {\em instantiation} consisting of\eat{\noteteemu{whereas, I would say the developer/service {\em registers} her offering, i.e., sounds like the terms contact and register are backwards. Do ignore this comment if there's a reason for this deviation from standard service discovery terminology.}}:(i) a {\em template} that describes and names the components of an application (\ie client, cache and origin server in this case) and indicates how they interface; and (ii) {\em metadata} specifying the location of back-end servers, application code that needs to be executed at the network edge, and other configuration parameters.
+
+The carrier then activates instances of this service at various network edges in response to clients connecting at those edges. When clients first connect to the network, a bootstrap mechanism (DHCP or others) provides the client with the address for the Coordinator which the client then registers with. On registration the Coordinator provides the client with a handle for a {\em Discovery} service. The application then uses the Discovery service to find the cache.
+
+While the template -- which dictates the overall structure of the application -- remains fixed, a tenant can evolve an application by changing the metadata, which can: change the set of services invoked at the network edge (\eg to introduce transcoding), change the software deployed at the network edge (\eg upgrade the software or update its configuration), or change the location of back-end servers. None of this requires manual intervention by the carrier; these updates are sent by the tenant to the Coordinator (using either a programmatic interface or manually through a portal), which then implements these changes where appropriate (at the edges, or in the Discovery service).
+
+We now provide more technical details to flesh out how this works in practice.
+
+\eat{
+\eat{We consider an application designer (or tenant) who is developing a friend-locator\fixme{change} application that could be enhanced with network support. She begins by dividing the functionality between the client (which we assume runs on one or more user devices), network services (to be run at the edge), and back-end servers hosting various components of the application. She then assigns application-specific names to each server involved in the application and to each edge service. The carrier provides (to the developer) the name of an {\em application coordinator} service.}
+
+The server-side code is similar to what one would have in an implementation that does not leverage network support. The edge services could be pre-existing services (e.g., caches, firewalls) or application-specific code provided by the developer (and run in a VM at the edge, to ensure isolation from other tenants). Similarly, the client-side code is largely similar to what clients run today, except that it knows to register with the carrier's application coordinator
+
+To deploy the application, the developer provides the application coordinator with an {\em invocation} that contains: a {\em template} that identifies the component names and the dataflow between components, and {\em metadata} specifying the location of the back-end servers.
+
+When a client for this application connects to a new network, it contacts the application coordinator (whose name is embedded in the client code).  The coordinator then activates the relevant edge services at the closest network edge, and hands back (to the client) a handle to an application-specific {\em Discovery} service, which can be used by the client to find the appropriate servers and edge services. This Discovery service bases the content of its response on the metadata supplied in the invocation.
+
+The application developer evolves the service by changing the metadata, which can: change the set of services invoked at the network edge (e.g., adding a firewall), change the software used at the network edge (e.g., upgrade to a new version, or change configuration), or change the location of the back-end servers. None of this requires manual intervention by the carrier; these updates are sent by the developer (tenant) to the application coordinator, which then implements these changes where appropriate (at the edges, or in the Discovery service).
+
+We now provide more technical details to flesh out how this works in practice.
+}
+\eat{
+\begin{outline}
+
+\1 Carrier is responsible for instantiating enough copies of the edge service to provide appropriate level of service.
+    \2 Many possible policies
+        \3 Instantiate at every edge with application users.
+        \3 Instantiate if no copy within a certain number of hops and also when required for scaling.
+    \2 \notepanda{Not sure if this belongs here, but: this is basically the kind of elasticity that some Amazon services provide. The scaling done
+    by the carrier will probably depend both on how important a service is to its users and how much money the tenant is paying.}
+    \2 \notepanda{Carrier could also choose to provide tenant with an interface to  allow greater flexibility in scaling and payment.}
+    
+\1 As a service evolves application designer/tenant can change metadata to fine-tune offerings.
+    \2 Can change the set of services placed at the network edge.
+    \2 Update the configuration and software at the network edge.
+    \2 Updates are sent to the coordinator which takes care of updating running instances of edge services.
+        \3 Updates are applied nearly instantaneously.
+
+\1 This is just one example scenario, several variations possible
+    \2 Explored in the next few section.
+    \2 Main insight here is that application writers can deploy services in the network without operator intervention.
+    \2 Tenant responsible for providing an interesting application, carrier responsible for scaling it to meet demand.
+        \3 Also allows for usage based billing. 
+\end{outline}
+
+}
